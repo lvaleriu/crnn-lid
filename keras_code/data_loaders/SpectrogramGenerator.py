@@ -4,6 +4,8 @@ import numpy as np
 from PIL import Image
 import fnmatch
 import sys
+import tempfile
+
 from subprocess import Popen, PIPE, STDOUT
 
 if (sys.version_info >= (3,0)):
@@ -54,6 +56,8 @@ class SpectrogramGenerator(object):
         '''
 
         file_name = "tmp_{}.png".format(random.randint(0, 100000))
+        file_name = tempfile.mktemp() + '.png'
+
         command = "sox -V0 '{}' -n remix 1 rate 10k spectrogram -y {} -X {} -m -r -o {}".format(file, height, pixel_per_sec, file_name)
         p = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
 
@@ -124,9 +128,12 @@ class SpectrogramGenerator(object):
 
 if __name__ == "__main__":
 
-    a = SpectrogramGenerator("/extra/tom/news2/raw", {"pixel_per_second": 50, "input_shape": [129, 100, 1], "batch_size": 32, "num_classes": 4}, shuffle=True)
+    #  a = SpectrogramGenerator("/extra/tom/news2/raw", {"pixel_per_second": 50, "input_shape": [129, 100, 1], "batch_size": 32, "num_classes": 4}, shuffle=True)
+    a = SpectrogramGenerator('/media/work/audio/musiclid/youtube_spoken', {"pixel_per_second": 50, "input_shape": [129, 100, 1], "batch_size": 32, "num_classes": 4}, shuffle=True)
     gen = a.get_generator()
 
 
     for a in gen:
+
+        print (a.shape)
         pass

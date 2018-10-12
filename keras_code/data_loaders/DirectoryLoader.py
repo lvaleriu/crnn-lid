@@ -1,11 +1,12 @@
 import os
 import random
-import numpy as np
 from itertools import cycle
+
+import numpy as np
 from keras.utils.np_utils import to_categorical
-from keras.engine.training import generator_queue
 
 from SpectrogramGenerator import SpectrogramGenerator
+
 
 class DirectoryLoader(object):
 
@@ -44,21 +45,21 @@ class DirectoryLoader(object):
                 label_sequence = cycle(range(num_classes))  # generate (0, 1, 2, 3, 0, 1, 2, 3, ...)
                 sample_selection = [label_sequence.next() for r in range(config["batch_size"])]
 
-            data_batch = np.zeros((self.config["batch_size"], ) + tuple(self.config["input_shape"]))  # (batch_size, cols, rows, channels)
-            label_batch = np.zeros((self.config["batch_size"], self.config["num_classes"]))  # (batch_size,  num_classes)
+            data_batch = np.zeros(
+                (self.config["batch_size"],) + tuple(self.config["input_shape"]))  # (batch_size, cols, rows, channels)
+            label_batch = np.zeros(
+                (self.config["batch_size"], self.config["num_classes"]))  # (batch_size,  num_classes)
 
             for i, label in enumerate(sample_selection):
-
                 # data = self.generator_queues[label].get()
                 data = self.generator_queues[label].next()
                 data = np.divide(data, 255.0)
 
                 height, width, channels = data.shape
                 data_batch[i, : height, :width, :] = data
-                label_batch[i, :] = to_categorical([label], nb_classes=self.config["num_classes"])  # one-hot encoding
+                label_batch[i, :] = to_categorical([label], num_classes=self.config["num_classes"])  # one-hot encoding
 
             yield data_batch, label_batch
-
 
     def get_num_files(self):
 
@@ -68,14 +69,14 @@ class DirectoryLoader(object):
         return len(self.generators) * min_num_files * self.config["batch_size"]
 
 
-
 if __name__ == "__main__":
 
     import scipy.misc
-    a = DirectoryLoader("/Users/therold/Downloads/Speech Data/EU Speech", {"pixel_per_second": 50, "input_shape": [129, 100, 1], "batch_size": 32, "num_classes": 4}, shuffle=True)
+
+    a = DirectoryLoader("/Users/therold/Downloads/Speech Data/EU Speech",
+                        {"pixel_per_second": 50, "input_shape": [129, 100, 1], "batch_size": 32, "num_classes": 4},
+                        shuffle=True)
     print a.get_num_files()
-
-
 
     for (data, labels) in a.get_data():
         # print data, labels

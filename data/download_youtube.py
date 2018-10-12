@@ -21,28 +21,32 @@ def clean_filename(filename):
     return new_name
 
 
-def download(language, source, source_name, source_type):
+def download(language, source, source_name, source_type, raw_dir, segmented_dir):
 
-    output_path_raw = os.path.join(args.output_path, "raw", language, source_name)
+    output_path_raw = os.path.join(args.output_path, raw_dir, language, source_name)
+    audio_format = 'mp3'
     
     if source_type == "playlist":
         playlist_archive = os.path.join(output_path_raw, "archive.txt")
 
         print "Downloading {0} {1} to {2}".format(source_type, source_name, output_path_raw)
-        command = """youtube-dl -i --download-archive {} --max-filesize 50m --no-post-overwrites --max-downloads {} --extract-audio --audio-format wav {} -o "{}/%(title)s.%(ext)s" """.format(
-            playlist_archive, args.max_downloads, source, output_path_raw)
+        command = """youtube-dl -i --download-archive {} --max-filesize 50m --no-post-overwrites --max-downloads {} --extract-audio --audio-format {} {} -o "{}/%(title)s.%(ext)s" """.format(
+            playlist_archive, args.max_downloads, audio_format, source, output_path_raw)
         subprocess.call(command, shell=True)
     else:       
         if os.path.exists(output_path_raw):
             print "skipping {0} because the target folder already exists".format(output_path_raw)
         else:
             print "Downloading {0} {1} to {2}".format(source_type, source_name, output_path_raw)
-            command = """youtube-dl -i --max-downloads {} --extract-audio --audio-format wav {} -o "{}/%(title)s.%(ext)s" """.format(args.max_downloads, source, output_path_raw)
+            command = """youtube-dl -i --max-downloads {} --extract-audio --audio-format {} {} -o "{}/%(title)s.%(ext)s" """.format(args.max_downloads, audio_format, source, output_path_raw)
             subprocess.call(command, shell=True)
 
 
+    file_counter[language] += len(glob.glob(os.path.join(output_path_raw, "*.{}".format(audio_format))))
+    return
+
     # Use ffmpeg to convert and split WAV files into 10 second parts
-    output_path_segmented = os.path.join(args.output_path, "segmented", language, source_name)
+    output_path_segmented = os.path.join(args.output_path, segmented_dir, language, source_name)
     segmented_files = glob.glob(os.path.join(output_path_segmented, "*.wav"))
     
     if source_type == "playlist" or not os.path.exists(output_path_segmented):
@@ -70,29 +74,33 @@ def download(language, source, source_name, source_type):
 
 
 
-def download_user(language, user):
+def download_user(language, user, raw_dir, segmented_dir):
     user_selector = "ytuser:%s" % user
-    download(language, user_selector, user, "user")
+    download(language, user_selector, user, "user", raw_dir, segmented_dir)
 
 
-def download_playlist(language, playlist_name, playlist_id):
-    download(language, playlist_id, playlist_name, "playlist")
+def download_playlist(language, playlist_name, playlist_id, raw_dir, segmented_dir):
+    download(language, playlist_id, playlist_name, "playlist", raw_dir, segmented_dir)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output', dest='output_path', default=os.getcwd(), required=True)
-    parser.add_argument('--downloads', dest='max_downloads', default=1200)
+    # parser.add_argument('--output', dest='output_path', default=os.getcwd(), required=True)
+    parser.add_argument('--output', dest='output_path', default='/media/work/audio/musiclid/youtube_spoken', required=False)
+    parser.add_argument('--downloads', dest='max_downloads', default=100)
     args = parser.parse_args()
 
-    sources = read_yaml("sources.yml")
+    raw_dir = 'raw_validation'
+    segmented_dir = 'segmented_validation'
+
+    sources = read_yaml("validation_sources.yml")
     for language, categories in sources.items():
         for user in categories["users"]:
             if user is None:
                 continue
                 
-            download_user(language, user)
+            download_user(language, user, raw_dir, segmented_dir)
             
         for category in categories["playlists"]:
             if category is None:
@@ -100,8 +108,9 @@ if __name__ == '__main__':
 
             playlist_name = category
             playlist_id = category
-            download_playlist(language, playlist_name, playlist_id)
+            download_playlist(language, playlist_name, playlist_id, raw_dir, segmented_dir)
 
-    create_csv(os.path.join(args.output_path, "segmented"))
+    create_csv(os.path.join(args.output_path, raw_dir))
+    # create_csv(os.path.join(args.output_path, segmented_dir))
 
     print file_counter

@@ -33,7 +33,7 @@ class CSVLoader(object):
                 data = self.process_file(file_path)
                 height, width, channels = data.shape
                 data_batch[i, : height, :width, :] = data
-                label_batch[i, :] = to_categorical([label], nb_classes=self.config["num_classes"]) # one-hot encoding
+                label_batch[i, :] = to_categorical([label], num_classes=self.config["num_classes"]) # one-hot encoding
 
             start += self.config["batch_size"]
 

@@ -1,10 +1,13 @@
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 import shutil
 import numpy as np
 import argparse
 from datetime import datetime
 from yaml import load
 from collections import namedtuple
+import tensorflow as tf
 
 import models
 import data_loaders
@@ -12,6 +15,22 @@ from evaluate import evaluate
 
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 from keras.optimizers import Adam, RMSprop, SGD
+
+
+def as_keras_metric(method):
+    import functools
+    from keras import backend as K
+    import tensorflow as tf
+    @functools.wraps(method)
+    def wrapper(self, args, **kwargs):
+        """ Wrapper for turning tensorflow metrics into keras metrics """
+        value, update_op = method(self, args, **kwargs)
+        K.get_session().run(tf.local_variables_initializer())
+        with tf.control_dependencies([update_op]):
+            value = tf.identity(value)
+        return value
+    return wrapper
+
 
 def train(cli_args, log_dir):
 
@@ -38,12 +57,17 @@ def train(cli_args, log_dir):
     model = model_class.create_model(train_data_generator.get_input_shape(), config)
     print(model.summary())
 
+    precision = as_keras_metric(tf.metrics.precision)
+    recall = as_keras_metric(tf.metrics.recall)
+
     optimizer = Adam(lr=config["learning_rate"], decay=1e-6)
     # optimizer = RMSprop(lr=config["learning_rate"], rho=0.9, epsilon=1e-08, decay=0.95)
     # optimizer = SGD(lr=config["learning_rate"], decay=1e-6, momentum=0.9, clipnorm=1, clipvalue=10)
     model.compile(optimizer=optimizer,
                   loss="categorical_crossentropy",
-                  metrics=["accuracy", "recall", "precision", "fmeasure"])
+                  metrics=["accuracy"])
+                  # metrics=["accuracy", recall, precision])
+                  # metrics=["accuracy", "recall", "precision", "fmeasure"])
 
     if cli_args.weights:
         model.load_weights(cli_args.weights)
@@ -51,15 +75,15 @@ def train(cli_args, log_dir):
     # Training
     history = model.fit_generator(
         train_data_generator.get_data(),
-        samples_per_epoch=train_data_generator.get_num_files(),
-        nb_epoch=config["num_epochs"],
+        steps_per_epoch=train_data_generator.get_num_files(),
+        epochs=config["num_epochs"],
         callbacks=[model_checkpoint_callback, tensorboard_callback, csv_logger_callback, early_stopping_callback],
         verbose=1,
         validation_data=validation_data_generator.get_data(should_shuffle=False),
-        nb_val_samples=validation_data_generator.get_num_files(),
-        nb_worker=2,
-        max_q_size=config["batch_size"],
-        pickle_safe=True
+        validation_steps=validation_data_generator.get_num_files(),
+        workers=2,
+        max_queue_size=config["batch_size"],
+        use_multiprocessing=True
     )
 
     # Do evaluation on model with best validation accuracy

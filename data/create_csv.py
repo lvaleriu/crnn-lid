@@ -39,6 +39,7 @@ def create_csv(root_dir, train_validation_split=0.8):
     for lang in languages:
         print(lang)
         files = list(recursive_glob(os.path.join(root_dir, lang), "*.wav"))
+        files.extend(recursive_glob(os.path.join(root_dir, lang), "*.mp3"))
         files.extend(recursive_glob(os.path.join(root_dir, lang), "*.png"))
         num_files = len(files)
 
@@ -95,7 +96,8 @@ def create_csv(root_dir, train_validation_split=0.8):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', dest='root_dir', default=os.getcwd())
+    # parser.add_argument('--dir', dest='root_dir', default=os.getcwd())
+    parser.add_argument('--dir', dest='root_dir', default='/media/work/audio/musiclid/youtube_spoken/spectograms')
     parser.add_argument('--split', dest='train_validation_split', default=0.8)
     args = parser.parse_args()
 

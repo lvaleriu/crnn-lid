@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import os
 import argparse
-import scipy.misc
-import numpy as np
+import os
 import sys
+
+import numpy as np
+import scipy.misc
 
 lib_dir = os.path.join(os.getcwd(), "../keras/data_loaders")
 sys.path.append(lib_dir)
 
-from SpectrogramGenerator import SpectrogramGenerator
-from NoisyBackgroundSpectrogramGenerator import NoisyBackgroundSpectrogramGenerator
-from VinylBackgroundSpectrogramGenerator import VinylBackgroundSpectrogramGenerator
-from MusicBackgroundSpectrogramGenerator import MusicBackgroundSpectrogramGenerator
+from keras_code.data_loaders.SpectrogramGenerator import SpectrogramGenerator
 from create_csv import create_csv
 
-def directory_to_spectrograms(args):
 
+def directory_to_spectrograms(args):
     source = args.source
     config = {
         "pixel_per_second": args.pixel_per_second,
@@ -29,11 +27,12 @@ def directory_to_spectrograms(args):
     languages = ["english",
                  "german",
                  "french",
-                 "spanish",
-                 "chinese",
-                 "russian"]
+                 "spanish"]
+                 #  "chinese",
+                 #  "russian"]
 
-    generators = [SpectrogramGenerator(os.path.join(source, language), config, shuffle=False, run_only_once=True) for language in languages]
+    generators = [SpectrogramGenerator(os.path.join(source, language), config, shuffle=False, run_only_once=True) for
+                  language in languages]
     generator_queues = [SpectrogramGen.get_generator() for SpectrogramGen in generators]
 
     for language in languages:
@@ -48,7 +47,6 @@ def directory_to_spectrograms(args):
 
         try:
             for j, language in enumerate(languages):
-
                 data = next(generator_queues[j])
 
                 assert data.shape == target_shape, "Shape mismatch {} vs {}".format(data.shape, args.shape)
@@ -67,15 +65,13 @@ def directory_to_spectrograms(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--shape', dest='shape', default=[129, 500, 1], type=int, nargs=3)
     parser.add_argument('--pixel', dest='pixel_per_second', default=50, type=int)
-    parser.add_argument('--source', dest='source', required=True)
-    parser.add_argument('--target', dest='target', required=True)
+    parser.add_argument('--source', dest='source', required=False, default='/media/work/audio/musiclid/youtube_spoken/raw')
+    parser.add_argument('--target', dest='target', required=False, default='/media/work/audio/musiclid/youtube_spoken/spectograms')
     cli_args = parser.parse_args()
 
     directory_to_spectrograms(cli_args)
 
-    create_csv(cli_args.target)
-
+    # create_csv(cli_args.target)
